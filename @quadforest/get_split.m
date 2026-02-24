@@ -46,10 +46,10 @@ for i = 1:npat
         else % search to tree at left
             nei_tree = C(t, 1);
             nei_child = 4 * quadforest.interleave(2^l - 1, y, l) + 1;
-        end
-        rot_dir = obj.get_rot_dir(nei_tree, 1);
-        if abs(rot_dir) < 2
-            nei_child = obj.rotate_node(l + 1, nei_child, rot_dir);
+            rot_dir = obj.get_rot_dir(nei_tree, t); % from POV of nei_tree, root is to the right, so second arg is 2
+            if abs(rot_dir) < 2
+                nei_child = obj.rotate_node(l + 1, nei_child, rot_dir);
+            end
         end
         if l < obj.L_max && ismember(nei_child, obj.morton{nei_tree}{l + 1})
             split{i}(1) = 1;
@@ -62,10 +62,10 @@ for i = 1:npat
         else
             nei_tree = C(t, 2); 
             nei_child = 4 * quadforest.interleave(0, y, l);
-        end
-        rot_dir = obj.get_rot_dir(nei_tree, 2);
-        if abs(rot_dir) < 2
-            nei_child = obj.rotate_node(l + 1, nei_child, rot_dir);
+            rot_dir = obj.get_rot_dir(nei_tree, t);
+            if abs(rot_dir) < 2
+                nei_child = obj.rotate_node(l + 1, nei_child, rot_dir);
+            end
         end
         if l < obj.L_max && ismember(nei_child, obj.morton{nei_tree}{l + 1})
             split{i}(2) = 1;
@@ -74,17 +74,17 @@ for i = 1:npat
         % neighbor below
         if y > 0
             nei_tree = t;
-            nei_child = 4 * quadforest.interleave(x, y - 1, l);
+            nei_child = 4 * quadforest.interleave(x, y - 1, l) + 2;
         else
-            if (i == 43)
-                disp("hi")
-            end
             nei_tree = C(t, 3);
-            nei_child = 4 * quadforest.interleave(x, 2^l - 1, l);
+            nei_child = 4 * quadforest.interleave(x, 2^l - 1, l) + 2;
+            rot_dir = obj.get_rot_dir(nei_tree, t);
+            if abs(rot_dir) < 2
+                nei_child = obj.rotate_node(l + 1, nei_child, rot_dir);
+            end
         end
-        rot_dir = obj.get_rot_dir(nei_tree, 3);
-        if abs(rot_dir) < 2
-            nei_child = obj.rotate_node(l + 1, nei_child, rot_dir);
+        if (i == 43)
+            disp("here")
         end
         if l < obj.L_max && ismember(nei_child, obj.morton{nei_tree}{l + 1})
             split{i}(3) = 1;
@@ -93,14 +93,14 @@ for i = 1:npat
         % neighbor above
         if y < 2^l - 1
             nei_tree = t;
-            nei_child = 4 * quadforest.interleave(x, y + 1, l) + 2;
+            nei_child = 4 * quadforest.interleave(x, y + 1, l);
         else
             nei_tree = C(t, 4);
-            nei_child = 4 * quadforest.interleave(x, 0, l) + 2;
-        end
-        rot_dir = obj.get_rot_dir(nei_tree, 4);
-        if abs(rot_dir) < 2
-            nei_child = obj.rotate_node(l + 1, nei_child, rot_dir);
+            nei_child = 4 * quadforest.interleave(x, 0, l);
+            rot_dir = obj.get_rot_dir(nei_tree, t);
+            if abs(rot_dir) < 2
+                nei_child = obj.rotate_node(l + 1, nei_child, rot_dir);
+            end
         end
         if l < obj.L_max && ismember(nei_child, obj.morton{nei_tree}{l + 1})
             split{i}(4) = 1;

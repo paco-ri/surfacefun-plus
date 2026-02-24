@@ -24,3 +24,8 @@
 
 # Documentation
 docs/_build
+
+# Testing
+*.txt
+*.vtk
+*.mat

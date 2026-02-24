@@ -255,33 +255,18 @@ for i = (npat1 + 1):npat
     z{i} = z_chi{mod(p2q(i, 3),4)+1};
 end
 
-%{
-plot(dom)
-hold on
-set(gcf, 'Color', 'w')
-p_nums = 1:npat;
-
-for p_num = p_nums
-    disp(p2q(p_num, :))
-    plot3(x{p_num}, y{p_num}, z{p_num}, 'b.')
-end
-%}
-plot(dom)
-hold on
-set(gcf, 'Color', 'w')
-ctr_ix = idivide(n, int32(2)) + 1;
-for i = 1:npat
-    text(x{i}(ctr_ix, ctr_ix), y{i}(ctr_ix, ctr_ix), z{i}(ctr_ix, ctr_ix), int2str(i), 'Color', 'red');
-end
+% plot(dom)
+% hold on
+% set(gcf, 'Color', 'w')
+% ctr_ix = idivide(n, int32(2)) + 1;
+% for i = 1:npat
+%     text(1.1 * x{i}(ctr_ix, ctr_ix), 1.1 * y{i}(ctr_ix, ctr_ix), 1.1 * z{i}(ctr_ix, ctr_ix), int2str(i), 'Color', 'red');
+% end
 
 % get split info
 split = qf.get_split(p2q, dom.connectivity.elem2elem);
-for i = 1:npat
-    fprintf("Patch %d: ", i)
-    disp(split{i})
-end
-writematrix(dom.connectivity.elem2elem, "orig_conn.txt")
-writecell(split, "split.txt")
+% writematrix(dom.connectivity.elem2elem, "orig_conn.txt")
+% writecell(split, "split.txt")
 
 dom = surfacemesh(x, y, z, split);
 

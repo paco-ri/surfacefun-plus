@@ -1,9 +1,10 @@
-function dir = get_rot_dir(obj, root, root2nei_idx)
+function dir = get_rot_dir(obj, root, nei)
     %TODO docs
     % Get the rotation between root and nei from perspective of root
 
     C = obj.C;
-    nei = C(root, root2nei_idx);
+    % nei = C(root, root2nei_idx);
+    root2nei_idx = find(C(root, :) == nei);
     nei2root_idx = find(C(nei, :) == root);
     if (nei2root_idx == root2nei_idx) % root and nei are both on same side from each other's POV
         dir = 0;
