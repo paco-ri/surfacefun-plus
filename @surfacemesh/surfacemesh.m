@@ -146,6 +146,7 @@ classdef surfacemesh < handle
         dom = fromRhino(varargin);
         dom = import(varargin);
         dom = square(varargin);
+        dom = adap_ref(varargin);
 
     end
 
