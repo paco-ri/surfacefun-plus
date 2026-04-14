@@ -6,7 +6,6 @@ function [balanced_morton, addl_morton, remo_morton] = balance_quadforest(obj, m
 
 % utility when deciding to plant a new quadtree
 temp = [1 3; 0 2; 0 1; 2 3];
-
 L_max = obj.L_max;
 balanced_morton = morton;
 addl_morton = cell(obj.n_trees, 1);
@@ -147,6 +146,14 @@ while r > 0
         for i = level+1:r-1
             p = quadforest.get_parents(absent_ancestors{k,i});
             c = quadforest.get_children(p);
+            if k == 2 && (i == 1 || i == 2)
+                disp('absent_ancestors')
+                disp(absent_ancestors{k,i})
+                disp('p')
+                disp(p)
+                disp('c')
+                disp(c)
+            end
             addl_morton{k}{i-1} = unique([addl_morton{k}{i-1} quadforest.get_parents(absent_ancestors{k,i})]);
             addl_morton{k}{i} = unique([addl_morton{k}{i} c]);
             balanced_morton{k}{i-1} = setdiff(balanced_morton{k}{i-1}, quadforest.get_parents(absent_ancestors{k,i}));

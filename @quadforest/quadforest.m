@@ -12,6 +12,7 @@ classdef quadforest
         split
         addl_patches % patches added to level-restrict forest
         remo_patches % patches removed to level-restrict forest
+        tree_roots
     end
 
     methods
@@ -24,6 +25,7 @@ classdef quadforest
             [obj.morton, obj.addl_patches, obj.remo_patches] = obj.balance_quadforest(morton, tree_roots);
             obj.merge_idx = cell(obj.n_trees, 1);
             obj.merged_patches = cell(obj.n_trees, 1);
+            obj.tree_roots = tree_roots;
             % for i = 1:obj.n_trees
             %     [obj.merge_idx{i}, obj.merged_patches{i}] = quadforest.mergeIdxQuadtree(morton{i});
             % end

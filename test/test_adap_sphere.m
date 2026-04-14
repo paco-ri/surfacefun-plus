@@ -4,7 +4,6 @@ clear
 n = 8;
 dom = surfacemesh.sphere(n, 1);
 C = dom.connectivity.elem2elem;
-npat0 = 4 * 6;
 
 amr_tol = 1e-8;
 marked = 1;

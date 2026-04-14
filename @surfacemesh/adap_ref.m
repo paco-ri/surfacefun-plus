@@ -1,4 +1,4 @@
-function dom = adap_ref(dom, amr_tol, rmax, mode, marked)
+function [dom, qf, p2q] = adap_ref(dom, amr_tol, rmax, mode, marked)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 arguments (Input)
@@ -11,6 +11,8 @@ end
 
 arguments (Output)
     dom
+    qf
+    p2q
 end
 
 % mode = 2 -> refine w.r.t. second fundamental form
@@ -186,7 +188,7 @@ for i = 1:npat
 end
 
 % for i in 1:npat0, if p2q(i, 2) is not zero, then there is a tree at Q{i}
-tree_roots = p2q(:, 2) > 0;
+tree_roots = find(p2q(:, 2) > 0);
 qf = quadforest(Q, rmax, dom.connectivity.elem2elem, tree_roots);
 % TODO get new patches required for balancing
 % idea: at each level, collect list of patches to be refined and call
