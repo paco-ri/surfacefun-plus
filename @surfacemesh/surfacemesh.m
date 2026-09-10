@@ -147,6 +147,7 @@ classdef surfacemesh < handle
         dom = import(varargin);
         dom = square(varargin);
         [dom, qf, p2q] = adap_ref(varargin);
+        [dom, qf, p2q, split] = refine_leaves(varargin);
 
     end
 
