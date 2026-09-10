@@ -495,13 +495,6 @@ end
 
 end
 
-function I = patchL2norm(fvals, J)
-[nv, nu] = size(fvals);
-wu = chebtech2.quadwts(nu); wu = wu(:);
-wv = chebtech2.quadwts(nv); wv = wv(:);
-I = sqrt(sum(sum(fvals.^2 .* wv .* wu.' .* sqrt(J))));
-end
-
 function I = patchL2maxnorm(fvals_list, J)
 I = 0;
 for fvals = fvals_list
