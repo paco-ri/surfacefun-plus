@@ -146,7 +146,7 @@ classdef surfacemesh < handle
         dom = fromRhino(varargin);
         dom = import(varargin);
         dom = square(varargin);
-        [dom, qf, p2q] = adap_ref(varargin);
+        [dom, qf, p2q, hist] = adap_ref(varargin);
         [dom, qf, p2q, split] = refine_leaves(varargin);
         eta = ff_indicator(varargin);
 
