@@ -266,7 +266,7 @@ end
 % end
 
 % get split info
-split = qf.get_split(p2q, dom.connectivity.elem2elem);
+split = qf.get_split(p2q);
 % writematrix(dom.connectivity.elem2elem, "orig_conn.txt")
 % writecell(split, "split.txt")
 

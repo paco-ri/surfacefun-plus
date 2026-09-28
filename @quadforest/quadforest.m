@@ -37,8 +37,7 @@ classdef quadforest
         plot_quadtree(obj, t, varargin)
         plot_quadforest(obj, varargin)
         rotated_node = rotate_node(obj, level, node, direction)
-        c = forest_colleagues(obj, xy, forest_id, n)
-        dir = get_rot_dir(obj, root, root2nei_idx)
+        [c, s2] = forest_colleagues(obj, xy, forest_id, n)
     end
 
     methods(Static)

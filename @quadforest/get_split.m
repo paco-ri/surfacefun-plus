@@ -1,112 +1,34 @@
-function split = get_split(obj, p2q, C)
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
-arguments (Input)
-    obj 
-    p2q % patch --> quadforest mapping
-    C % connectivity
-end
-
-arguments (Output)
-    split
-end
+function split = get_split(obj, p2q)
+%GET_SPLIT   Get hanging-edge flags for the leaves of a 2:1 balanced quadforest.
+%   SPLIT = GET_SPLIT(OBJ, P2Q) returns a cell array with one logical
+%   1 x 4 row per leaf, P2Q(i,:) = [tree, level, morton]. SPLIT{i}(s) is true
+%   when side s of leaf i, ordered [Left Right Down Up], faces two finer
+%   neighbours.
 
 npat = size(p2q, 1);
 split = cell(npat, 1);
+% The children of cell m are 4*m + k, with k laid out as
+%     2 3
+%     0 1
+% For side s = 1..4 (order L R D U), edgechild(s) = k, where k is an arbitrarily chosen
+% child of the neighbor that touches side s.
+edgechild = [0 1 0 2];
 for i = 1:npat
-    % p2q(i, :) = (tree, level, Morton)
     t = p2q(i, 1);
     l = p2q(i, 2);
     m = p2q(i, 3);
     split{i} = false(1, 4);
-    if l == 0 % no tree on this patch
-        nei_tree = C(t, 1);
-        if ismember(1, obj.morton{nei_tree}{1})
-            split{i}(1) = 1;
-        end
-        nei_tree = C(t, 2);
-        if ismember(0, obj.morton{nei_tree}{1})
-            split{i}(2) = 1;
-        end
-        nei_tree = C(t, 3);
-        if ismember(0, obj.morton{nei_tree}{1})
-            split{i}(3) = 1;
-        end
-        nei_tree = C(t, 4);
-        if ismember(2, obj.morton{nei_tree}{1})
-            split{i}(4) = 1;
-        end
-    else
-        [x, y] = quadforest.deinterleave(m, l);
-
-        % left neighbor
-        if x > 0
-            nei_tree = t; % left neighbor tree
-            nei_child = 4 * quadforest.interleave(x - 1, y, l) + 1; % example Morton code one level deeper that borders m
-        else % search to tree at left
-            nei_tree = C(t, 1);
-            nei_child = 4 * quadforest.interleave(2^l - 1, y, l) + 1;
-            rot_dir = obj.get_rot_dir(nei_tree, t); % from POV of nei_tree, root is to the right, so second arg is 2
-            if abs(rot_dir) < 2
-                nei_child = obj.rotate_node(l + 1, nei_child, rot_dir);
-            end
-        end
-        if l < obj.L_max && ismember(nei_child, obj.morton{nei_tree}{l + 1})
-            split{i}(1) = 1;
-        end
-
-        % right neighbor
-        if x < 2^l - 1
-            nei_tree = t;
-            nei_child = 4 * quadforest.interleave(x + 1, y, l);
-        else
-            nei_tree = C(t, 2); 
-            nei_child = 4 * quadforest.interleave(0, y, l);
-            rot_dir = obj.get_rot_dir(nei_tree, t);
-            if abs(rot_dir) < 2
-                nei_child = obj.rotate_node(l + 1, nei_child, rot_dir);
-            end
-        end
-        if l < obj.L_max && ismember(nei_child, obj.morton{nei_tree}{l + 1})
-            split{i}(2) = 1;
-        end
-
-        % neighbor below
-        if y > 0
-            nei_tree = t;
-            nei_child = 4 * quadforest.interleave(x, y - 1, l) + 2;
-        else
-            nei_tree = C(t, 3);
-            nei_child = 4 * quadforest.interleave(x, 2^l - 1, l) + 2;
-            rot_dir = obj.get_rot_dir(nei_tree, t);
-            if abs(rot_dir) < 2
-                nei_child = obj.rotate_node(l + 1, nei_child, rot_dir);
-            end
-        end
-        if (i == 43)
-            disp("here")
-        end
-        if l < obj.L_max && ismember(nei_child, obj.morton{nei_tree}{l + 1})
-            split{i}(3) = 1;
-        end
-
-        % neighbor above
-        if y < 2^l - 1
-            nei_tree = t;
-            nei_child = 4 * quadforest.interleave(x, y + 1, l);
-        else
-            nei_tree = C(t, 4);
-            nei_child = 4 * quadforest.interleave(x, 0, l);
-            rot_dir = obj.get_rot_dir(nei_tree, t);
-            if abs(rot_dir) < 2
-                nei_child = obj.rotate_node(l + 1, nei_child, rot_dir);
-            end
-        end
-        if l < obj.L_max && ismember(nei_child, obj.morton{nei_tree}{l + 1})
-            split{i}(4) = 1;
-        end
+    if l >= obj.L_max
+        continue
     end
-    
+    [col, back] = obj.forest_colleagues(uint64(m), t, l);
+    for s = 1:4
+        % Side s is a hanging edge iff the same-level neighbour across it is 
+        % split. Take one of the neighbour's children that touches leaf i; under 2:1
+        % balance the neighbour is split exactly when that child is a leaf.
+        child = 4*col(s, 1) + edgechild(back(s));
+        split{i}(s) = ismember(uint64(child), obj.morton{col(s, 2)}{l + 1});
+    end
 end
 
 end

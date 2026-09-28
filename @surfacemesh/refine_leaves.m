@@ -30,14 +30,12 @@ function [dom, qf, p2q, split] = refine_leaves(dom0, p2q, marked, rmax)
 %   RMAX is the maximum quadtree depth, passed to QUADFOREST as L_max.
 %
 %   Neighbour queries here do NOT go through QUADFOREST/FOREST_COLLEAGUES or
-%   QUADFOREST/GET_SPLIT. Those resolve cross-patch adjacency with
-%   ROTATE_NODE, which rotates in a 2^(l+1) grid for a level-l code and so
-%   returns the wrong neighbour once trees are more than one level deep;
-%   meshes built that way carry level-1 cells adjacent to level-3 ones and
-%   are rejected by SURFACEOP's HPS solve. Instead the adjacency of the base
-%   mesh (which patch, which side, and whether the shared edge is traversed
-%   in the opposite direction) is read off the corner geometry of DOM0 once,
-%   and both the balance condition and the SPLIT flags are derived from it.
+%   QUADFOREST/GET_SPLIT. Instead the adjacency of the base mesh (which
+%   patch, which side, and whether the shared edge is traversed in the
+%   opposite direction) is read off the corner geometry of DOM0 once, and
+%   both the balance condition and the SPLIT flags are derived from it. This
+%   path was written while QUADFOREST's cross-tree neighbour lookup was
+%   wrong; that has since been fixed, and the two now agree exactly.
 %
 %   See also SURFACEMESH/ADAP_REF, QUADFOREST, SURFACEFUN/PROLONG_LEAVES.
 

@@ -1,79 +1,68 @@
-function c = forest_colleagues(obj, xy, forest_id, n)
-[x, y] = quadforest.deinterleave(xy,n);
+function [c, s2] = forest_colleagues(obj, xy, forest_id, n)
+%FOREST_COLLEAGUES   Same-level neighbours of a node, across tree boundaries.
+%   C = FOREST_COLLEAGUES(OBJ, XY, FOREST_ID, N) returns a 4 x 2 array whose
+%   row s is [morton, tree] of the level-N cell adjacent to side s of cell XY
+%   in tree FOREST_ID. Sides are ordered [Left Right Down Up], as are the
+%   columns of OBJ.C: Left/Right are x-1/x+1 (the u direction), Down/Up are
+%   y-1/y+1 (the v direction).
+%
+%   [C, S2] = FOREST_COLLEAGUES(...) also returns S2, a 4-element vector 
+%   that gives the side of the neighboring cell that touches cell XY.
+%   Within a tree it is the opposite side, e.g. S2(1) = 2; across trees it 
+%   depends on how the two patches are oriented.
 
-c = [0 0;
-     0 0;
-     0 0;
-     0 0];
+N = 2^n;
+[x, y] = quadforest.deinterleave(xy, n);
+x = double(x);
+y = double(y);
 
-if x > 0
-    c(1,1) = quadforest.interleave(x-1,y,n);
-    c(1,2) = forest_id;
-else % search to the left
-    c(1,2) = obj.C(forest_id, 1);
-    % look at where forest_id is from POV of left neighbor
-    % find position of forest_id in C(c(1,2), :)
-    neighbor_idx = find(obj.C(c(1,2), :) == forest_id);
-    c(1,1) = quadforest.interleave(2^n-1,y,n);
-    if neighbor_idx == 1 % forest_id and neighbor are both on left of each other
-        c(1,1) = obj.rotate_node(n+1,c(1,1),0); % 180 degrees
-    elseif neighbor_idx == 3 % from neighbor POV, forest_id is below
-        c(1,1) = obj.rotate_node(n+1,c(1,1),1);
-    elseif neighbor_idx == 4 % from neighbor POV, forest_id is above
-        c(1,1) = obj.rotate_node(n+1,c(1,1),-1);
-    end     
-    % rotate
-end
+step = [-1 0; 1 0; 0 -1; 0 1];
+inside = [x > 0, x < N-1, y > 0, y < N-1];
+opposite = [2 1 4 3];
+sgn = [-1 1 1 -1];
 
-if x < 2^n-1 
-    c(2,1) = quadforest.interleave(x+1,y,n);
-    c(2,2) = forest_id;
-else % search to the right
-    c(2,2) = obj.C(forest_id, 2);
-    % look at where forest_id is from POV of right neighbor
-    neighbor_idx = find(obj.C(c(2,2), :) == forest_id);
-    c(2,1) = quadforest.interleave(0,y,n);
-    if neighbor_idx == 2 % forest_id and neighbor are both on right of each other
-        c(2,1) = obj.rotate_node(n+1,c(2,1),0); % 180 degrees
-    elseif neighbor_idx == 3 % from neighbor POV, forest_id is below
-        c(2,1) = obj.rotate_node(n+1,c(2,1),-1);
-    elseif neighbor_idx == 4 % from neighbor POV, forest_id is above
-        c(2,1) = obj.rotate_node(n+1,c(2,1),1);
+c = zeros(4, 2);
+s2 = zeros(4, 1);
+for s = 1:4
+    if inside(s)
+        c(s,:) = [double(quadforest.interleave(x + step(s,1), y + step(s,2), n)), forest_id];
+        s2(s) = opposite(s);
+        continue
     end
-end
 
-if y < 2^n-1
-    c(3,1) = quadforest.interleave(x,y+1,n);
-    c(3,2) = forest_id;
-else % search down
-    c(3,2) = obj.C(forest_id, 3);
-    % look at where forest_id is from POV of bottom neighbor
-    neighbor_idx = find(obj.C(c(3,2), :) == forest_id);
-    c(3,1) = quadforest.interleave(x,0,n);
-    if neighbor_idx == 3 % forest_id and neighbor are both below each other
-        c(3,1) = obj.rotate_node(n+1,c(3,1),0); % 180 degrees
-    elseif neighbor_idx == 1 % from neighbor POV, forest_id is to the left
-        c(3,1) = obj.rotate_node(n+1,c(3,1),-1);
-    elseif neighbor_idx == 2 % from neighbor POV, forest_id is to the right
-        c(3,1) = obj.rotate_node(n+1,c(3,1),1);
+    % Across a tree boundary, the neighbor's side comes from OBJ.C.
+    t2 = obj.C(forest_id, s);
+    back = find(obj.C(t2, :) == forest_id);
+    if numel(back) ~= 1
+        error('QUADFOREST:forest_colleagues:ambiguous', ...
+            ['Patches %d and %d share %d edges, so the connectivity alone ' ...
+             'cannot say which one side %d of patch %d is.'], ...
+            forest_id, t2, numel(back), s, forest_id);
     end
-end
+    s2(s) = back;
 
-if y > 0
-    c(4,1) = quadforest.interleave(x,y-1,n);
-    c(4,2) = forest_id;
-else % search up
-    c(4,2) = obj.C(forest_id, 4);
-    % look at where forest_id is from POV of top neighbor
-    neighbor_idx = find(obj.C(c(4,2), :) == forest_id);
-    c(4,1) = quadforest.interleave(x,2^n-1,n);
-    if neighbor_idx == 4 % forest_id and neighbor are both above each other
-        c(4,1) = obj.rotate_node(n+1,c(4,1),0); % 180 degrees
-    elseif neighbor_idx == 1 % from neighbor POV, forest_id is to the left
-        c(4,1) = obj.rotate_node(n+1,c(4,1),1);
-    elseif neighbor_idx == 2 % from neighbor POV, forest_id is to the right
-        c(4,1) = obj.rotate_node(n+1,c(4,1),-1);
+    % The cell's x- or y-coordinate a along the shared edge either remains a
+    % or becomes N-1-a. sgn(s) = +1 if a counter-clockwise walk around the
+    % patch runs along side s in the direction its parameter increases
+    % (Right, Down) and -1 otherwise (Left, Up). Consistently oriented
+    % patches walk a shared edge in opposite directions, so a flips exactly
+    % when sgn(s)*sgn(back) = 1. This one rule covers all sixteen side
+    % pairings.
+    if s <= 2
+        a = y;
+    else
+        a = x;
     end
+    if sgn(s)*sgn(back) == 1
+        a = N - 1 - a;
+    end
+    switch back
+        case 1, xn = 0;     yn = a;
+        case 2, xn = N - 1; yn = a;
+        case 3, xn = a;     yn = 0;
+        case 4, xn = a;     yn = N - 1;
+    end
+    c(s,:) = [double(quadforest.interleave(xn, yn, n)), t2];
 end
 
 end

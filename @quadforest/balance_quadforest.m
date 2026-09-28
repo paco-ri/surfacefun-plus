@@ -1,11 +1,9 @@
-function [balanced_morton, addl_morton, remo_morton] = balance_quadforest(obj, morton, tree_roots)
+function [balanced_morton, addl_morton, remo_morton] = balance_quadforest(obj, morton, tree_roots) %#ok<INUSD>
 %BALANCE_QUADFOREST
 % Q = quadforest
 % L_max = max level of quadforest
 % C = edge connectivity
 
-% utility when deciding to plant a new quadtree
-temp = [1 3; 0 2; 0 1; 2 3];
 L_max = obj.L_max;
 balanced_morton = morton;
 addl_morton = cell(obj.n_trees, 1);
@@ -19,76 +17,34 @@ r = L_max; % current refinement level
 while r > 0
     % for r-level leaves, get Morton codes of parents' colleagues
     coll_of_par = cell(n_pat,1);
-    new_tree_roots = []; % patches that don't have a quadtree
     for k = 1:n_pat % loop over roots
         if length(balanced_morton{k}) >= r % quadtree has at least r levels
             n_nodes = length(balanced_morton{k}{r}); % number of nodes in tree k at level r
-            if isempty(coll_of_par{k})
-                coll_of_par{k} = nan(4*n_nodes, 1);
-            end
             for i = 1:n_nodes % loop over these nodes
                 parent = bitshift(balanced_morton{k}{r}(i),-2); % get parent of node
                 colls = obj.forest_colleagues(parent, k, r-1); % get morton code and tree number of parent's colleagues
                 for j = 1:4 % loop over colleages
-                    if isempty(coll_of_par{colls(j,2)})
-                        coll_of_par{colls(j,2)} = nan(4*n_nodes, 1);
-                    end
-                    coll_of_par{colls(j,2)}(4*(i-1)+j) = colls(j,1); % add colleages to coll_of_par in appropriate spot
+                    % append morton code of colleague to coll_of_par{k}
+                    coll_of_par{colls(j,2)}(end+1, 1) = colls(j,1);
                 end
-                new_tree_roots = union(new_tree_roots, colls(:,2).');
             end
         end
     end
     for k = 1:n_pat
         coll_of_par{k} = unique(coll_of_par{k});
-        coll_of_par{k} = coll_of_par{k}(~isnan(coll_of_par{k}));
     end
-    new_tree_roots = setdiff(new_tree_roots, tree_roots);
-    new_tree_roots = reshape(new_tree_roots, 1, []);
-    
-    to_uproot = nan(1, n_pat);
-    for root = new_tree_roots % only plant tree if neighbors have 2+ levels
-        j = 1;
-        uproot = true;
-        while uproot && j <= 4
-            nei = obj.C(root, j); % TODO only check relevant neighbors
-            one_side_more_than_2 = false;
-            nei_has_2_levels = false;
-            for i = 2:L_max
-                nei_has_2_levels = nei_has_2_levels || ~isempty(balanced_morton{nei}{i}); % true if tree at nei has level i >= 2
+    % coll_of_par{k} lists the level-(r-1) cells that tree k must contain.
+    % If tree k is still an unrefined base patch and r-1 >= 1, split it into
+    % its four level-1 children.
+    new_tree_roots = [];
+    if r > 1
+        for k = 1:n_pat
+            % If tree k has required cells at level r-1 and is not yet refined, split it.
+            if ~isempty(coll_of_par{k}) && all(cellfun(@isempty, balanced_morton{k}))
+                new_tree_roots(end+1) = k; %#ok<AGROW>
             end
-            nei_idx = find(obj.C(nei, :) == root); % position of root from nei's POV
-            if (nei_idx == j) % j and nei are both on same side from each other's POV
-                rot_dir = 0; % 180 degrees
-            elseif (j == 1 && nei_idx == 3 || j == 2 && nei_idx == 4 || j == 3 && nei_idx == 2 || j == 4 && nei_idx == 1)
-                rot_dir = 1; % clockwise
-            elseif (j == 1 && nei_idx == 4 || j == 2 && nei_idx == 3 || j == 3 && nei_idx == 1 || j == 4 && nei_idx == 2)
-                rot_dir = -1; % counterclockwise
-            else
-                rot_dir = 2; % don't rotate
-            end
-            if rot_dir ~= 2
-                levels_on_correct_side = ~ismember(obj.rotate_node(r, temp(j, 1), rot_dir), balanced_morton{nei}{1}); % when j = 1, consider left nei
-                % true if nei missing level 1, morton 1, which is a node on nei's right side
-                levels_on_correct_side = levels_on_correct_side || ~ismember(obj.rotate_node(r, temp(j, 2), rot_dir), balanced_morton{nei}{1}); 
-                % when j = 1, same question for nei level 1, morton 3 
-                % i.e., true if nei has 2+ levels on side bordering root
-            else
-                levels_on_correct_side = ~ismember(temp(j, 1), balanced_morton{nei}{1}); % when j = 1, consider left nei
-                levels_on_correct_side = levels_on_correct_side || ~ismember(temp(j, 2), balanced_morton{nei}{1}); 
-            end
-            levels_border_root = nei_has_2_levels && levels_on_correct_side; % true if nei has level i >= 2 on side bordering root
-            one_side_more_than_2 = one_side_more_than_2 || levels_border_root; % true if any level i >= 2 on side bordering root
-            all_less_than_2 = ~one_side_more_than_2; % true if nei has < 2 levels on all sides bordering root
-            uproot = uproot && all_less_than_2;
-            j = j + 1;
-        end
-        if uproot
-            to_uproot(root) = root;
         end
     end
-    to_uproot = rmmissing(to_uproot);
-    new_tree_roots = setdiff(new_tree_roots, to_uproot);
 
     % add trees at new tree roots
     if r > 1 && ~isempty(new_tree_roots)
@@ -97,7 +53,6 @@ while r > 0
             addl_morton{root}{1} = uint64([0b00 0b01 0b10 0b11]);
         end
     end
-    tree_roots = union(tree_roots, new_tree_roots);
 
     % if nodes in par_of_coll{k} are not in quadforest{k},
     % refine until they are.
@@ -146,14 +101,6 @@ while r > 0
         for i = level+1:r-1
             p = quadforest.get_parents(absent_ancestors{k,i});
             c = quadforest.get_children(p);
-            if k == 2 && (i == 1 || i == 2)
-                disp('absent_ancestors')
-                disp(absent_ancestors{k,i})
-                disp('p')
-                disp(p)
-                disp('c')
-                disp(c)
-            end
             addl_morton{k}{i-1} = unique([addl_morton{k}{i-1} quadforest.get_parents(absent_ancestors{k,i})]);
             addl_morton{k}{i} = unique([addl_morton{k}{i} c]);
             balanced_morton{k}{i-1} = setdiff(balanced_morton{k}{i-1}, quadforest.get_parents(absent_ancestors{k,i}));
