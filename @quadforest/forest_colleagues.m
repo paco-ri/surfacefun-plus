@@ -10,6 +10,9 @@ function [c, s2] = forest_colleagues(obj, xy, forest_id, n)
 %   that gives the side of the neighboring cell that touches cell XY.
 %   Within a tree it is the opposite side, e.g. S2(1) = 2; across trees it 
 %   depends on how the two patches are oriented.
+%
+%   A side on the boundary of an open surface (OBJ.C = -1) gets row [0 0]
+%   and S2 = 0.
 
 N = 2^n;
 [x, y] = quadforest.deinterleave(xy, n);
@@ -32,6 +35,9 @@ for s = 1:4
 
     % Across a tree boundary, the neighbor's side comes from OBJ.C.
     t2 = obj.C(forest_id, s);
+    if t2 < 1
+        continue
+    end
     back = find(obj.C(t2, :) == forest_id);
     if numel(back) ~= 1
         error('QUADFOREST:forest_colleagues:ambiguous', ...

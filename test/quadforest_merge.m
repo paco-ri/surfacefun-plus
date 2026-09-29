@@ -18,7 +18,8 @@ for i = 1:n_trees(1)
         end
     end
 end
-Q = quadforest(morton, L_max, C, 1);
+Q = quadforest(morton, L_max, C);
+Q = Q.balance_quadforest();
 Q.plot_quadtree(Q.morton{5})
 % TODO automatically generate shifts for quadforest plotting
 

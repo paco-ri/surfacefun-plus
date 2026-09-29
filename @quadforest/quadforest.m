@@ -1,6 +1,11 @@
 classdef quadforest
-    %UNTITLED2 Summary of this class goes here
-    %   Detailed explanation goes here
+    %QUADFOREST   A forest of quadtrees, one per patch of a base mesh.
+    %   QF = QUADFOREST(MORTON, L_MAX, C) stores the leaves of each tree as
+    %   Morton codes: MORTON{t}{l} lists the level-l leaves of tree t, and a
+    %   tree with no codes is an unrefined base patch. C is the base mesh's
+    %   element-to-element connectivity, ordered [Left Right Down Up]. At 
+    %   construction, the forest is not necessarily 2:1 balanced. call 
+    %   BALANCE_QUADFOREST to make it 2:1 balanced.
 
     properties ( Access = public )
         L_max
@@ -12,26 +17,31 @@ classdef quadforest
         split
         addl_patches % patches added to level-restrict forest
         remo_patches % patches removed to level-restrict forest
-        tree_roots
+    end
+
+    properties ( Dependent )
+        tree_roots % trees with at least one Morton code
     end
 
     methods
-        function obj = quadforest(morton, L_max, C, tree_roots)
-            %UNTITLED2 Construct an instance of this class
-            %   Detailed explanation goes here
+        function obj = quadforest(morton, L_max, C)
             obj.L_max = L_max;
             obj.n_trees = length(morton);
             obj.C = C;
-            [obj.morton, obj.addl_patches, obj.remo_patches] = obj.balance_quadforest(morton, tree_roots);
+            obj.morton = morton;
             obj.merge_idx = cell(obj.n_trees, 1);
             obj.merged_patches = cell(obj.n_trees, 1);
-            obj.tree_roots = tree_roots;
             % for i = 1:obj.n_trees
             %     [obj.merge_idx{i}, obj.merged_patches{i}] = quadforest.mergeIdxQuadtree(morton{i});
             % end
         end
 
-        [balanced_morton, addl_patches, remo_patches] = balance_quadforest(obj, morton, tree_roots)
+        function r = get.tree_roots(obj)
+            r = find(cellfun(@(q) iscell(q) && any(~cellfun(@isempty, q)), ...
+                obj.morton)).';
+        end
+
+        obj = balance_quadforest(obj)
         plot_quadtree_merge(obj, elem, level)
         split = get_split(obj, p2q)
         plot_quadtree(obj, t, varargin)

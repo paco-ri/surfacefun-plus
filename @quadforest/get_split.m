@@ -23,6 +23,9 @@ for i = 1:npat
     end
     [col, back] = obj.forest_colleagues(uint64(m), t, l);
     for s = 1:4
+        if col(s, 2) == 0
+            continue % surface boundary
+        end
         % Side s is a hanging edge iff the same-level neighbour across it is 
         % split. Take one of the neighbour's children that touches leaf i; under 2:1
         % balance the neighbour is split exactly when that child is a leaf.

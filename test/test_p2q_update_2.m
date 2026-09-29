@@ -87,9 +87,8 @@ Qact{1}{1} = [0, 2, 3];
 Qact{1}{2} = [4, 6, 7];
 Qact{1}{3} = [20, 21, 22, 23];
 
-% for i in 1:npat0, if p2q(i, 2) is not zero, then there is a tree at Q{i}
-tree_roots = p2q(:, 2) > 0;
-qf = quadforest(Q, rmax, dom.connectivity.elem2elem, tree_roots);
+qf = quadforest(Q, rmax, dom.connectivity.elem2elem);
+qf = qf.balance_quadforest();
 % TODO get new patches required for balancing
 % idea: at each level, collect list of patches to be refined and call
 % refine routines below

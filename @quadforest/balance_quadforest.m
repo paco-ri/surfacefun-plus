@@ -1,11 +1,12 @@
-function [balanced_morton, addl_morton, remo_morton] = balance_quadforest(obj, morton, tree_roots) %#ok<INUSD>
-%BALANCE_QUADFOREST
-% Q = quadforest
-% L_max = max level of quadforest
-% C = edge connectivity
+function obj = balance_quadforest(obj)
+%BALANCE_QUADFOREST   Refine a quadforest until it is 2:1 balanced.
+%   QF = BALANCE_QUADFOREST(QF) splits leaves of QF.MORTON until no two
+%   leaves that share an edge, within a tree or across trees, differ by more
+%   than one level. Leaves are only ever split, never merged. Also sets
+%   QF.ADDL_PATCHES and QF.REMO_PATCHES.
 
 L_max = obj.L_max;
-balanced_morton = morton;
+balanced_morton = obj.morton;
 addl_morton = cell(obj.n_trees, 1);
 remo_morton = cell(obj.n_trees, 1);
 for i = 1:obj.n_trees
@@ -24,6 +25,9 @@ while r > 0
                 parent = bitshift(balanced_morton{k}{r}(i),-2); % get parent of node
                 colls = obj.forest_colleagues(parent, k, r-1); % get morton code and tree number of parent's colleagues
                 for j = 1:4 % loop over colleages
+                    if colls(j,2) == 0
+                        continue % surface boundary
+                    end
                     % append morton code of colleague to coll_of_par{k}
                     coll_of_par{colls(j,2)}(end+1, 1) = colls(j,1);
                 end
@@ -111,5 +115,9 @@ while r > 0
     end
     r = r - 1;
 end
+
+obj.morton = balanced_morton;
+obj.addl_patches = addl_morton;
+obj.remo_patches = remo_morton;
 
 end
