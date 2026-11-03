@@ -40,11 +40,11 @@ end
 %    S.domain.split{3} = [0 0 0 0];
 %
 % Note: This will break if the mesh is not 2:1 level restricted.
-S.patches = splitHangingEdges(S.patches, S.domain);
+S.patches = splitHangingEdges(S.patches, S.domain, S.method);
 
 end
 
-function patches = splitHangingEdges(patches, dom)
+function patches = splitHangingEdges(patches, dom, method)
 
 if ( isempty(patches) )
     return
@@ -72,6 +72,18 @@ B_1f2  = blkdiag(B_1f2l, B_1f2r);
 [xleaf, ~, wleaf] = chebpts(n, 2);
 B_mid = barymat(0, xleaf, wleaf);
 
+% Evaluate leaf values along a side at the points of its two halves. The
+% coarse flux and boundary nodes are evaluated there from the leaf
+% polynomials rather than interpolated from the skeleton: the binormal and
+% metric along a coarse edge need not be resolved by nskel points.
+E_half = barymat([xskel_lsub ; xskel_rsub], xleaf, wleaf);
+e1 = [1 zeros(1, n-1)];
+en = [zeros(1, n-1) 1];
+T_side = {kron(e1, E_half), kron(en, E_half), kron(E_half, e1), kron(E_half, en)};
+D = diffmat(n);
+Du = kron(D, eye(n));
+Dv = kron(eye(n), D);
+
 for k = 1:length(patches)
     split = dom.split{k};
     if ( any(split) )
@@ -83,11 +95,58 @@ for k = 1:length(patches)
         B_split_2f1(split) = {B_2f1};
         B_split_1f2 = blkdiag(B_split_1f2{:});
         B_split_2f1 = blkdiag(B_split_2f1{:});
-        patches{k}.S        = patches{k}.S * B_split_1f2;
-        patches{k}.BtB      = B_split_2f1 * patches{k}.BtB * B_split_1f2;
-        patches{k}.du_part  = B_split_2f1 * patches{k}.du_part;
-        patches{k}.normal_d = B_split_2f1 * patches{k}.normal_d;
-        patches{k}.xyz      = B_split_2f1 * patches{k}.xyz;
+        patches{k}.S = patches{k}.S * B_split_1f2;
+
+        % The flux below is the DtN normal derivative of a nonsingular leaf;
+        % other leaves keep the interpolated operators.
+        exact = strcmp(method, 'DtN') && ~dom.singular(k);
+        X = [dom.x{k}(:) dom.y{k}(:) dom.z{k}(:)];
+        Xu = Du * X;
+        Xv = Dv * X;
+        nd = cell(4, 1);
+        xyz = cell(4, 1);
+        for s = 1:4
+            rows = (s-1)*nskel + (1:nskel);
+            if ( ~split(s) )
+                nd{s} = patches{k}.normal_d(rows,:);
+                xyz{s} = patches{k}.xyz(rows,:);
+                continue
+            end
+            T = T_side{s};
+            xyz{s} = T * X;
+            if ( ~exact )
+                continue
+            end
+            xu = T * Xu;
+            xv = T * Xv;
+            EE = sum(xu.^2, 2);
+            FF = sum(xu.*xv, 2);
+            GG = sum(xv.^2, 2);
+            JJ = EE.*GG - FF.^2;
+            % Outward binormal: in the tangent plane, normal to the side.
+            if ( s <= 2 )
+                nrm = (2*s-3) * xu; tng = xv;
+            else
+                nrm = (2*s-7) * xv; tng = xu;
+            end
+            tng = tng ./ vecnorm(tng, 2, 2);
+            bn = nrm - tng .* sum(nrm.*tng, 2);
+            bn = bn ./ vecnorm(bn, 2, 2);
+            bu = sum(bn.*xu, 2);
+            bv = sum(bn.*xv, 2);
+            nd{s} = ((GG.*bu - FF.*bv)./JJ) .* (T*Du) + ((EE.*bv - FF.*bu)./JJ) .* (T*Dv);
+        end
+        patches{k}.xyz = vertcat(xyz{:});
+
+        if ( exact )
+            patches{k}.normal_d = vertcat(nd{:});
+            patches{k}.BtB      = patches{k}.normal_d * patches{k}.S;
+            patches{k}.du_part  = patches{k}.normal_d * patches{k}.u_part;
+        else
+            patches{k}.BtB      = B_split_2f1 * patches{k}.BtB * B_split_1f2;
+            patches{k}.du_part  = B_split_2f1 * patches{k}.du_part;
+            patches{k}.normal_d = B_split_2f1 * patches{k}.normal_d;
+        end
         nsides = sum(split+1);
         patches{k}.BtB_scl = repmat({ones(nskel,1)}, nsides, 1);
 
