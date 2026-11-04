@@ -52,6 +52,7 @@ classdef leaf < surfaceop.patch
         % Initialize an array of LEAF objects.
         P = initialize_DtN(op, dom, rhs);
         P = initialize_ItI(op, dom, eta, rhs);
+        nd = binormal_d(X, TDu, TDv, side);
 
     end
 

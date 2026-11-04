@@ -78,6 +78,13 @@ II = kron(I, I);
 Du = kron(D, I);
 Dv = kron(I, D);
 
+% u- and v-derivatives at the skeleton points of each side
+e1 = [1 zeros(1, n-1)];
+en = [zeros(1, n-1) 1];
+T_skel = {kron(e1, B), kron(en, B), kron(B, e1), kron(B, en)};
+TDu = cellfun(@(T) T*Du, T_skel, 'UniformOutput', false);
+TDv = cellfun(@(T) T*Dv, T_skel, 'UniformOutput', false);
+
 X = reshape([dom.x{:}], [n^2 numPatches]);
 Y = reshape([dom.y{:}], [n^2 numPatches]);
 Z = reshape([dom.z{:}], [n^2 numPatches]);
@@ -159,6 +166,7 @@ for k = 1:numPatches
         dx = L2S * (J(ee).^2.*Dx(ee,:));
         dy = L2S * (J(ee).^2.*Dy(ee,:));
         dz = L2S * (J(ee).^2.*Dz(ee,:));
+        normal_d = NN(:,1,k).*dx + NN(:,2,k).*dy + NN(:,3,k).*dz;
 
         % The D2N map needs to be scaled on each side (e.g. when being
         % merged) to account for the Jacobian scaling which has been
@@ -190,9 +198,11 @@ for k = 1:numPatches
         Ainv = @(u) solve(dA, u, false);
         S = Ainv([-A(ii,ee), rhs(:,:,k)]);
 
-        dx = L2S * Dx(ee,:);
-        dy = L2S * Dy(ee,:);
-        dz = L2S * Dz(ee,:);
+        Xk = [x(:) y(:) z(:)];
+        normal_d = zeros(numSkelPts, n^2);
+        for s = 1:4
+            normal_d((s-1)*nskel+(1:nskel),:) = surfaceop.leaf.binormal_d(Xk, TDu{s}, TDv{s}, s);
+        end
         D2N_scl = D2N_scl0;
     end
 
@@ -201,9 +211,6 @@ for k = 1:numPatches
     tmpS(ii,:) = S;
     S = tmpS(:,1:numBdyPts) * S2L;
     u_part = tmpS(:,numBdyPts+1:end);
-
-    % Construct normal derivative operator:
-    normal_d = NN(:,1,k).*dx + NN(:,2,k).*dy + NN(:,3,k).*dz;
 
     % Construct the D2N map and particular flux:
     D2N = normal_d * S;
